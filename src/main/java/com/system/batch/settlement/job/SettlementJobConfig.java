@@ -44,6 +44,7 @@ public class SettlementJobConfig {
     public Step settlementStep() {
         return new StepBuilder("settlementStep", jobRepository)
                 .<Orders, Settlement> chunk(1000)
+                .transactionManager(transactionManager)
                 .reader(ordersReader(null))
                 .processor(settlementProcessor())
                 .writer(settlementWriter())
