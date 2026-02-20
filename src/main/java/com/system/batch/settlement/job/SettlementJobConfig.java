@@ -6,7 +6,11 @@ import jakarta.persistence.EntityManagerFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.batch.core.job.Job;
+import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.Step;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.batch.infrastructure.item.database.JpaItemWriter;
 import org.springframework.batch.infrastructure.item.database.JpaPagingItemReader;
@@ -29,6 +33,23 @@ public class SettlementJobConfig {
     private final PlatformTransactionManager transactionManager;
     private final EntityManagerFactory entityManagerFactory;
 
+    @Bean
+    public Job settlementJob() {
+        return new JobBuilder("settlementJob", jobRepository)
+                .start(settlementStep())
+                .build();
+    }
+
+    @Bean
+    public Step settlementStep() {
+        return new StepBuilder("settlementStep", jobRepository)
+                .<Orders, Settlement> chunk(1000)
+                .reader(ordersReader(null))
+                .processor(settlementProcessor())
+                .writer(settlementWriter())
+                .build();
+    }
+
     // ItemReader
     @Bean
     @StepScope
@@ -46,7 +67,7 @@ public class SettlementJobConfig {
 
     // ItemProcessor
     @Bean
-    public ItemProcessor<Orders, Settlement> setttlementProcessor() {
+    public ItemProcessor<Orders, Settlement> settlementProcessor() {
         return item -> {
             int fee = (int) (item.getAmount() * 0.03);  // 수수료
             int settlementAmount = item.getAmount() - fee;
